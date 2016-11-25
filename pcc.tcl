@@ -1,5 +1,5 @@
 # Public Channel Commands
-# by wilk wilkowy
+# by wilk wilkowy // 2007..2016-08-21
 
 set pcc_char "!"
 
