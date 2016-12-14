@@ -1,5 +1,5 @@
 # Topic Resync & Recovery after a netsplit
-# by wilk wilkowy // 2015..2016-11-16
+# by wilk wilkowy // 2015..2016-11-28
 
 # Todo: move vars to .chanset
 
@@ -12,6 +12,7 @@ set topres_protect 30
 # Default channel topics.
 #set topres_default(#channel) "Hello!"
 
+# On/off .chanset flag.
 setudef flag topicresync
 
 bind rejn - * topres:check
@@ -21,13 +22,13 @@ bind dcc n|n topicresync topres:dccresync
 proc topres:dccresync {hand idx text} {
 	if {$text eq "now"} {
 		topres:resync
+		return 1
 	} elseif {$text eq "info"} {
-		topres:info
+		topres:info $idx
 	} else {
-		putlog "Usage: .topicresync <info/now>"
-		return
+		putdcc $idx "Usage: .topicresync <info/now>"
 	}
-	return 1
+	return
 }
 
 proc topres:check {nick uhost hand chan} {
@@ -63,35 +64,47 @@ proc topres:resync {} {
 	global topres_topic topres_default
 	foreach chan [channels] {
 		if {![channel get $chan topicresync] || ![botisop $chan]} { continue }
-		set topic [topic $chan]
-		if {$topic ne ""} {
-			putlog "Topic resync ($chan): $topic"
-			putserv "TOPIC $chan :$topic"
-			set topres_topic($chan) $topic
+		set chtopic [topic $chan]
+		if {$chtopic ne ""} {
+			set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} $chtopic]
+			set length [format "%03d" [string length $topic]]
+			putlog "Topic resync ($chan) \[$length]: $topic"
+			putserv "TOPIC $chan :$chtopic"
+			set topres_topic($chan) $chtopic
 		} elseif {[info exists topres_topic($chan)] && $topres_topic($chan) ne ""} {
-			putlog "Topic recovery ($chan): $topres_topic($chan)"
+			set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} $topres_topic($chan)]
+			set length [format "%03d" [string length $topic]]
+			putlog "Topic recovery ($chan) \[$length]: $topic"
 			putserv "TOPIC $chan :$topres_topic($chan)"
 		} elseif {[info exists topres_default($chan)] && $topres_default($chan) ne ""} {
-			putlog "Topic default ($chan): $topres_default($chan)"
+			set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} $topres_default($chan)]
+			set length [format "%03d" [string length $topic]]
+			putlog "Topic default ($chan) \[$length]: $topic"
 			putserv "TOPIC $chan :$topres_default($chan)"
 			set topres_topic($chan) $topres_default($chan)
 		}
 	}
 }
 
-proc topres:info {} {
+proc topres:info {idx} {
 	global topres_topic topres_default
 	foreach chan [channels] {
 		if {![channel get $chan topicresync]} { continue }
-		putlog "* Channel $chan:"
-		putlog "| Topic (current) : [topic $chan]"
+		putdcc $idx "* Channel $chan:"
+		set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} [topic $chan]]
+		set length [format "%03d" [string length $topic]]
+		putdcc $idx "| Topic (current) \[$length] : $topic"
 		if {[info exists topres_topic($chan)]} {
-			putlog "| Topic (backup)  : $topres_topic($chan)"
+			set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} $topres_topic($chan)]
+			set length [format "%03d" [string length $topic]]
+			putdcc $idx "| Topic (backup) \[$length]  : $topic"
 		}
 		if {[info exists topres_default($chan)]} {
-			putlog "| Topic (default) : $topres_default($chan)"
+			set topic [string map {"\002" "B" "\003" "C" "\017" "P" "\026" "R" "\037" "U"} $topres_default($chan)]
+			set length [format "%03d" [string length $topic]]
+			putdcc $idx "| Topic (default) \[$length] : $topic"
 		}
 	}
 }
 
-putlog "Topic Resync v1.7 by wilk"
+putlog "Topic Resync v1.8 by wilk"

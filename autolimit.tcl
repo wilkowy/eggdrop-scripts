@@ -1,5 +1,5 @@
 # Auto Limit Updater (based on Psotnic limiter)
-# by wilk wilkowy // 2016..2016-11-16
+# by wilk wilkowy // 2016..2016-11-28
 
 # Todo: move vars to .chanset
 # Todo: add dcc cmds w/o enforcing
@@ -31,6 +31,7 @@ set alimit_tolerance -50
 # Protect against floods (inertia), in seconds (0 - off).
 set alimit_protect 15
 
+# On/off .chanset flag.
 setudef flag autolimit
 
 bind join - * alimit:join
@@ -43,18 +44,19 @@ bind dcc n|n autolimit alimit:dccupdate
 
 proc alimit:dccupdate {hand idx text} {
 	if {$text eq "info"} {
-		alimit:info
+		alimit:info $idx
 	} elseif {$text eq "all"} {
 		foreach chan [channels] {
 			alimit:update $chan 1
 		}
+		return 1
 	} elseif {[validchan $text]} {
 		alimit:update $text 1
+		return 1
 	} else {
-		putlog "Usage: .autolimit <info/all/#>"
-		return
+		putdcc $idx "Usage: .autolimit <info/all/#>"
 	}
-	return 1
+	return
 }
 
 proc alimit:join {nick uhost hand chan} {
@@ -145,11 +147,11 @@ proc alimit:update {chan {enforce 0}} {
 	}
 }
 
-proc alimit:info {} {
+proc alimit:info {idx} {
 	global alimit_tolerance alimit_offset alimit_timer
 	foreach chan [channels] {
 		if {![channel get $chan autolimit]} { continue }
-		putlog "* Channel $chan:"
+		putdcc $idx "* Channel $chan:"
 		if {$alimit_tolerance >= 0} {
 			set tolerance $alimit_tolerance
 		} else {
@@ -167,23 +169,23 @@ proc alimit:info {} {
 			set max [expr {$limit - $alimit_offset + $tolerance}]
 			set range "$min..$max"
 		}
-		putlog "| Users  : $users \[current limit allows: $range]"
+		putdcc $idx "| Users  : $users \[current limit allows: $range]"
 		set exp [expr {$users + $alimit_offset}]
 		set min [expr {$exp - $tolerance}]
 		set max [expr {$exp + $tolerance}]
 		set status "ok"
 		if {$limit < $min || $limit > $max} { set status "update!" }
-		putlog "| Limit  : $limit \[expected: $exp, allowed: $min..$max] ($status)"
+		putdcc $idx "| Limit  : $limit \[expected: $exp, allowed: $min..$max] ($status)"
 		if {[info exists alimit_timer($chan)]} {
 			set timers [utimers]
 			set timer [lsearch -glob $timers "*$alimit_timer($chan)"]
 			if {$timer != -1} {
 				set status ""
 				if {[lindex $timers $timer 1 2] == 1} { set status " (forced)" }
-				putlog "| Update : [lindex $timers $timer 0]s$status"
+				putdcc $idx "| Update : [lindex $timers $timer 0]s$status"
 			}
 		}
 	}
 }
 
-putlog "Auto Limit v1.4 by wilk"
+putlog "Auto Limit v1.5 by wilk"

@@ -1,6 +1,7 @@
 # Topic Update: data->jutro->dzis
-# by wilk wilkowy // 2015..2016-11-16
+# by wilk wilkowy // 2015..2016-12-12
 
+# On/off .chanset flag.
 setudef flag topicupdate
 
 bind evnt - logfile topupd:update
@@ -9,14 +10,16 @@ bind dcc n|n topicupdate topupd:dccupdate
 proc topupd:dccupdate {hand idx text} {
 	if {$text eq "now"} {
 		topupd:update logfile
+		return 1
 	} else {
-		putlog "Usage: .topicupdate <now>"
-		return
+		putdcc $idx "Usage: .topicupdate <now>"
 	}
-	return 1
+	return
 }
 
 proc topupd:update {type} {
+	set now_day [strftime %-d]
+	set now_month [strftime %-m]
 	foreach chan [channels] {
 		if {![channel get $chan topicupdate] || ![botisop $chan]} { continue }
 		set topic [topic $chan]
@@ -27,12 +30,10 @@ proc topupd:update {type} {
 			regsub -all -nocase -- "\0030?3((?:Nast|Next|Quiz)\[^:\]*?: DZIS )" $topic "\0034\\1" topic
 			incr update
 		}
-		set event_day ""
-		set event_month ""
-		regexp -nocase -- {(poniedzialek|po?n\.|wtorek|wto?\.|srod[ae]|sro?\.|czwartek|czw\.|piatek|piat?\.|pt\.|sobot[ae]|sob\.|niedziel[ae]|nie\.|niedz\.) \(([0-3]?[0-9])[./]([01]?[0-9])\)} $topic match event_dayname event_day event_month
-		if {[string length $event_day] > 0 && [string length $event_month] > 0} {
-			set event_month [scan $event_month %d]
+		set matches [regexp -all -inline -nocase -- {(?:\mwe? )?(?:poniedzialek|po?n\.|wtorek|wto?\.|srod[ae]|sro?\.|czwartek|czw\.|piatek|piat?\.|pt\.|sobot[ae]|sob\.|niedziel[ae]|nie\.|niedz\.) \(([0-3]?[0-9])[./]([01]?[0-9])\)} $topic]
+		foreach {match event_day event_month} $matches {
 			set event_day [scan $event_day %d]
+			set event_month [scan $event_month %d]
 			set prev_day [expr {$event_day - 1}]
 			set prev_month $event_month
 			set prev_year [strftime %Y]
@@ -53,17 +54,15 @@ proc topupd:update {type} {
 					set prev_day 30
 				}
 			}
-			set subst ""
-			set day [strftime %-d]
-			set month [strftime %-m]
-			if {$day == $prev_day && $month == $prev_month} {
-				set subst "JUTRO"
-			} elseif {$day == $event_day && $month == $event_month} {
-				set subst "DZIS"
+			set soon ""
+			if {$now_day == $prev_day && $now_month == $prev_month} {
+				set soon "JUTRO"
+			} elseif {$now_day == $event_day && $now_month == $event_month} {
+				set soon "DZIS"
 			}
-			if {$subst ne ""} {
-				regsub -all -nocase -- {(\m(w|we) )?(poniedzialek|po?n\.|wtorek|wto?\.|srod[ae]|sro?\.|czwartek|czw\.|piatek|piat?\.|pt\.|sobot[ae]|sob\.|niedziel[ae]|nie\.|niedz\.) \([0-3]?[0-9][./][01]?[0-9]\)} $topic $subst topic
-				regsub -all -nocase -- "\0030?3((?:Nast|Next|Quiz)\[^:\]*?: )" $topic "\0034\\1" topic
+			if {$soon ne ""} {
+				set topic [string map -nocase [list $match $soon] $topic]
+				regsub -nocase -- "\0030?3((?:Nast|Next|Quiz)\[^:\]*?: )" $topic "\0034\\1" topic
 				incr update
 			}
 		}
@@ -75,4 +74,4 @@ proc topupd:update {type} {
 	return
 }
 
-putlog "Topic Update v1.9 by wilk"
+putlog "Topic Update v1.12 by wilk"
