@@ -1,5 +1,5 @@
 # Topic Update: data->jutro->dzis
-# by wilk wilkowy // 2015..2016-12-12
+# by wilk wilkowy // 2015..2017-01-27
 
 # On/off .chanset flag.
 setudef flag topicupdate
@@ -24,13 +24,14 @@ proc topupd:update {type} {
 		if {![channel get $chan topicupdate] || ![botisop $chan]} { continue }
 		set topic [topic $chan]
 		if {$topic eq ""} { continue }
+		set oldtopic $topic
 		set update 0
 		if {[string match -nocase "*jutro*" $topic]} {
 			set topic [string map -nocase {"JUTRO" "DZIS"} $topic]
 			regsub -all -nocase -- "\0030?3((?:Nast|Next|Quiz)\[^:\]*?: DZIS )" $topic "\0034\\1" topic
 			incr update
 		}
-		set matches [regexp -all -inline -nocase -- {(?:\mwe? )?(?:poniedzialek|po?n\.|wtorek|wto?\.|srod[ae]|sro?\.|czwartek|czw\.|piatek|piat?\.|pt\.|sobot[ae]|sob\.|niedziel[ae]|nie\.|niedz\.) \(([0-3]?[0-9])[./]([01]?[0-9])\)} $topic]
+		set matches [regexp -all -inline -nocase -- {(?:(?:\mwe? )?(?:poniedzialek|po?n\.|wtorek|wto?\.|srod[ae]|sro?\.|czwartek|czw\.|piatek|piat?\.|pt\.|sobot[ae]|sob\.|niedziel[ae]|nie\.|niedz\.) )?\(([0-3]?[0-9])[./]([01]?[0-9])\)} $topic]
 		foreach {match event_day event_month} $matches {
 			set event_day [scan $event_day %d]
 			set event_month [scan $event_month %d]
@@ -67,11 +68,12 @@ proc topupd:update {type} {
 			}
 		}
 		if {$update} {
-			putlog "Topic update ($chan): $topic"
+			putlog "Topic update ($chan) from: $oldtopic"
+			putlog "Topic update ($chan) to  : $topic"
 			putserv "TOPIC $chan :$topic"
 		}
 	}
 	return
 }
 
-putlog "Topic Update v1.12 by wilk"
+putlog "Topic Update v1.13 by wilk"

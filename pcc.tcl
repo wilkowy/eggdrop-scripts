@@ -1,42 +1,42 @@
 # Public Channel Commands
-# by wilk wilkowy // 2007..2016-08-21
+# by wilk wilkowy // 2007..2017-01-09
 
 set pcc_char "!"
 
 setudef flag chancmds
 
-bind pub m|m ${pcc_char}o pcc:op
-bind pub m|m ${pcc_char}op pcc:op
-bind pub m|m ${pcc_char}do pcc:deop
-bind pub m|m ${pcc_char}deop pcc:deop
+bind pub n|- ${pcc_char}o pcc:op
+bind pub n|- ${pcc_char}op pcc:op
+bind pub n|- ${pcc_char}do pcc:deop
+bind pub n|- ${pcc_char}deop pcc:deop
 
 bind pub v|v ${pcc_char}v pcc:voice
 bind pub v|v ${pcc_char}voice pcc:voice
 bind pub v|v ${pcc_char}dv pcc:devoice
 bind pub v|v ${pcc_char}devoice pcc:devoice
 
-bind pub m|m ${pcc_char}k pcc:kick
-bind pub m|m ${pcc_char}kick pcc:kick
-bind pub m|m ${pcc_char}b pcc:ban
-bind pub m|m ${pcc_char}ban pcc:ban
-bind pub m|m ${pcc_char}kb pcc:kban
-bind pub m|m ${pcc_char}kickban pcc:kban
-bind pub m|m ${pcc_char}ub pcc:unban
-bind pub m|m ${pcc_char}unban pcc:unban
+bind pub o|o ${pcc_char}k pcc:kick
+bind pub o|o ${pcc_char}kick pcc:kick
+bind pub n|- ${pcc_char}b pcc:ban
+bind pub n|- ${pcc_char}ban pcc:ban
+bind pub n|- ${pcc_char}kb pcc:kban
+bind pub n|- ${pcc_char}kickban pcc:kban
+bind pub n|- ${pcc_char}ub pcc:unban
+bind pub n|- ${pcc_char}unban pcc:unban
 
-bind pub v|v ${pcc_char}t pcc:topic
-bind pub v|v ${pcc_char}topic pcc:topic
-bind pub m|m ${pcc_char}m pcc:mode
-bind pub m|m ${pcc_char}mode pcc:mode
-bind pub m|m ${pcc_char}s pcc:shutup
-bind pub m|m ${pcc_char}silence pcc:shutup
-bind pub m|m ${pcc_char}shutup pcc:shutup
-bind pub m|m ${pcc_char}l pcc:ulimit
-bind pub m|m ${pcc_char}limit pcc:ulimit
-bind pub m|m ${pcc_char}ulimit pcc:ulimit
-bind pub m|m ${pcc_char}unlimit pcc:ulimit
-bind pub n|n ${pcc_char}lock pcc:lock
-bind pub n|n ${pcc_char}unlock pcc:unlock
+bind pub n|- ${pcc_char}t pcc:topic
+bind pub n|- ${pcc_char}topic pcc:topic
+bind pub n|- ${pcc_char}m pcc:mode
+bind pub n|- ${pcc_char}mode pcc:mode
+bind pub n|- ${pcc_char}s pcc:shutup
+bind pub n|- ${pcc_char}silence pcc:shutup
+bind pub n|- ${pcc_char}shutup pcc:shutup
+bind pub n|- ${pcc_char}l pcc:ulimit
+bind pub n|- ${pcc_char}limit pcc:ulimit
+bind pub n|- ${pcc_char}ulimit pcc:ulimit
+bind pub n|- ${pcc_char}unlimit pcc:ulimit
+bind pub n|- ${pcc_char}lock pcc:lock
+bind pub n|- ${pcc_char}unlock pcc:unlock
 
 bind pub n|- ${pcc_char}au pcc:adduser
 bind pub n|- ${pcc_char}+user pcc:adduser
@@ -55,11 +55,11 @@ bind pub n|- ${pcc_char}save pcc:save
 bind pub n|- ${pcc_char}backup pcc:backup
 bind pub n|- ${pcc_char}die pcc:die
 
-bind pub n|n ${pcc_char}jump pcc:jump
+bind pub n|- ${pcc_char}jump pcc:jump
 
 proc pcc:adduser {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan 0]} { return 0 }
-	set _who [lindex [split $text] 0]
+	set _who [pcc:getarg $text]
 	if {![validuser $_who]} {
 		putcmdlog "<<$nick>> !$hand! adduser $_who"
 		adduser $_who
@@ -68,7 +68,7 @@ proc pcc:adduser {nick host hand chan text} {
 
 proc pcc:deluser {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan 0]} { return 0 }
-	set _who [lindex [split $text] 0]
+	set _who [pcc:getarg $text]
 	if {[validuser $_who]} {
 		putcmdlog "<<$nick>> !$hand! deluser $_who"
 		deluser $_who
@@ -77,9 +77,9 @@ proc pcc:deluser {nick host hand chan text} {
 
 proc pcc:addhost {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan 0]} { return 0 }
-	set _who [lindex [split $text] 0]
+	set _who [pcc:getarg $text]
 	if {[validuser $_who]} {
-		set _host [lindex [split $text] 1]
+		set _host [pcc:getarg $text 1]
 		putcmdlog "<<$nick>> !$hand! addhost $_who $_host"
 		setuser $_who HOSTS $_host
 	}
@@ -87,13 +87,13 @@ proc pcc:addhost {nick host hand chan text} {
 
 proc pcc:op {nick host hand chan text} {
 	if {![pcc:ok_bot $chan]} { return 0 }
-	if {$text eq "" && ![isop $nick $chan]} {
+	if {[llength $text] < 1 && ![isop $nick $chan]} {
 		putcmdlog "<<$nick>> !$hand! op $chan $nick"
 		pushmode $chan +o $nick
 		#flushmode $chan
 	} else {
 		set _who ""
-		foreach _nick [split $text] {
+		foreach _nick [split [pcc:strcln $text]] {
 			if {[onchan $_nick $chan] && ![isop $_nick $chan]} {
 				append _who "$_nick "
 				pushmode $chan +o $_nick
@@ -108,14 +108,14 @@ proc pcc:op {nick host hand chan text} {
 
 proc pcc:deop {nick host hand chan text} {
 	if {![pcc:ok_bot $chan]} { return 0 }
-	if {$text eq "" && [isop $nick $chan]} {
+	if {[llength $text] < 1 && [isop $nick $chan]} {
 		putcmdlog "<<$nick>> !$hand! deop $chan $nick"
 		pushmode $chan -o $nick
 		#flushmode $chan
 	} else {
 		set _who ""
 		set _lvl [pcc:getlvl $hand $chan]
-		foreach _nick [split $text] {
+		foreach _nick [split [pcc:strcln $text]] {
 			if {[onchan $_nick $chan] && ![isbotnick $_nick] && [isop $_nick $chan]} {
 				if {$_lvl >= [pcc:getlvl [nick2hand $_nick] $chan]} {
 					append _who "$_nick "
@@ -132,13 +132,13 @@ proc pcc:deop {nick host hand chan text} {
 
 proc pcc:voice {nick host hand chan text} {
 	if {![pcc:ok_bot $chan]} { return 0 }
-	if {$text eq "" && ![isop $nick $chan] && ![isvoice $nick $chan]} {
+	if {[llength $text] < 1 && ![isop $nick $chan] && ![isvoice $nick $chan]} {
 		putcmdlog "<<$nick>> !$hand! voice $chan $nick"
 		pushmode $chan +v $nick
 		#flushmode $chan
 	} else {
 		set _who ""
-		foreach _nick [split $text] {
+		foreach _nick [split [pcc:strcln $text]] {
 			if {[onchan $_nick $chan] && ![isop $_nick $chan] && ![isvoice $_nick $chan]} {
 				append _who "$_nick "
 				pushmode $chan +v $_nick
@@ -153,13 +153,13 @@ proc pcc:voice {nick host hand chan text} {
 
 proc pcc:devoice {nick host hand chan text} {
 	if {![pcc:ok_bot $chan]} { return 0 }
-	if {$text eq "" && [isvoice $nick $chan]} {
+	if {[llength $text] < 1 && [isvoice $nick $chan]} {
 		putcmdlog "<<$nick>> !$hand! devoice $chan $nick"
 		pushmode $chan -v $nick
 		#flushmode $chan
 	} else {
 		set _who ""
-		foreach _nick [split $text] {
+		foreach _nick [split [pcc:strcln $text]] {
 			if {[onchan $_nick $chan] && [isvoice $_nick $chan]} {
 				append _who "$_nick "
 				pushmode $chan -v $_nick
@@ -174,7 +174,7 @@ proc pcc:devoice {nick host hand chan text} {
 
 proc pcc:kick {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _text [split $text]
+	set _text [split [string trim $text]]
 	set _who [lindex $_text 0]
 	if {[onchan $_who $chan] && ![isbotnick $_who]} {
 		if {[llength $_text] > 1} {
@@ -196,14 +196,14 @@ proc pcc:topic {nick host hand chan text} {
 
 proc pcc:mode {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _mode [lrange [split $text] 0 6]
+	set _mode [lrange [split [pcc:strcln $text]] 0 6]
 	putcmdlog "<<$nick>> !$hand! mode $chan $_mode"
 	putserv "MODE $chan :$_mode"
 }
 
 proc pcc:shutup {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _who [lindex [split $text] 0]
+	set _who [pcc:getarg $text]
 	if {$_who ne "" && [onchan $_who $chan] && ![isbotnick $_who] && $_who != $nick} {
 		if {![isvoice $nick $chan] && ![isop $nick $chan]} {
 			pushmode $chan +v $nick
@@ -233,7 +233,7 @@ proc pcc:unlock {nick host hand chan text} {
 
 proc pcc:ban {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _text [split $text]
+	set _text [split [string trim $text]]
 	set _who [lindex $_text 0]
 	if {[isbotnick $_who]} { return 0 }
 	if {[onchan $_who $chan]} {
@@ -254,7 +254,7 @@ proc pcc:ban {nick host hand chan text} {
 
 proc pcc:kban {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _text [split $text]
+	set _text [split [string trim $text]]
 	set _who [lindex $_text 0]
 	if {[isbotnick $_who]} { return 0 }
 	if {[onchan $_who $chan]} {
@@ -274,7 +274,7 @@ proc pcc:kban {nick host hand chan text} {
 
 proc pcc:unban {nick host hand chan text} {
 	if {![pcc:ok_bot $chan] || [llength $text] < 1} { return 0 }
-	set _mask [lindex [split $text] 0]
+	set _mask [pcc:getarg $text]
 	if {![ischanban $_mask $chan]} { return 0 }
 	putcmdlog "<<$nick>> !$hand! unban $chan $_mask"
 	killchanban $chan $_mask
@@ -313,14 +313,14 @@ proc pcc:reload {nick host hand chan text} {
 
 proc pcc:die {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan]} { return 0 }
-	if {$text eq ""} { set text "requested by: $nick" }
+	if {[llength $text] < 1} { set text "requested by: $nick" }
 	putcmdlog "<<$nick>> !$hand! die $text"
 	die $text
 }
 
 proc pcc:jump {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan]} { return 0 }
-	set _srv [lindex [split $text] 0]
+	set _srv [pcc:getarg $text]
 	putcmdlog "<<$nick>> !$hand! jump $_srv"
 	jump $_srv
 }
@@ -357,4 +357,12 @@ proc pcc:ok_usr {nick chan {needop 1}} {
 	return 1
 }
 
-putlog "Public Channel Commands v1.7 by wilk"
+proc pcc:strcln {text} {
+	return [string trim [regsub -all -- " +" $text " "]]
+}
+
+proc pcc:getarg {text {idx 0}} {
+	return [lindex [split [pcc:strcln $text]] $idx]
+}
+
+putlog "Public Channel Commands v1.8 by wilk"
