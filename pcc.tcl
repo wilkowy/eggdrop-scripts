@@ -5,10 +5,10 @@ set pcc_char "!"
 
 setudef flag chancmds
 
-bind pub n|- ${pcc_char}o pcc:op
-bind pub n|- ${pcc_char}op pcc:op
-bind pub n|- ${pcc_char}do pcc:deop
-bind pub n|- ${pcc_char}deop pcc:deop
+bind pub m|m ${pcc_char}o pcc:op
+bind pub m|m ${pcc_char}op pcc:op
+bind pub m|m ${pcc_char}do pcc:deop
+bind pub m|m ${pcc_char}deop pcc:deop
 
 bind pub v|v ${pcc_char}v pcc:voice
 bind pub v|v ${pcc_char}voice pcc:voice
@@ -17,26 +17,26 @@ bind pub v|v ${pcc_char}devoice pcc:devoice
 
 bind pub o|o ${pcc_char}k pcc:kick
 bind pub o|o ${pcc_char}kick pcc:kick
-bind pub n|- ${pcc_char}b pcc:ban
-bind pub n|- ${pcc_char}ban pcc:ban
-bind pub n|- ${pcc_char}kb pcc:kban
-bind pub n|- ${pcc_char}kickban pcc:kban
-bind pub n|- ${pcc_char}ub pcc:unban
-bind pub n|- ${pcc_char}unban pcc:unban
+bind pub m|m ${pcc_char}b pcc:ban
+bind pub m|m ${pcc_char}ban pcc:ban
+bind pub m|m ${pcc_char}kb pcc:kban
+bind pub m|m ${pcc_char}kickban pcc:kban
+bind pub m|m ${pcc_char}ub pcc:unban
+bind pub m|m ${pcc_char}unban pcc:unban
 
-bind pub n|- ${pcc_char}t pcc:topic
-bind pub n|- ${pcc_char}topic pcc:topic
-bind pub n|- ${pcc_char}m pcc:mode
-bind pub n|- ${pcc_char}mode pcc:mode
-bind pub n|- ${pcc_char}s pcc:shutup
-bind pub n|- ${pcc_char}silence pcc:shutup
-bind pub n|- ${pcc_char}shutup pcc:shutup
-bind pub n|- ${pcc_char}l pcc:ulimit
-bind pub n|- ${pcc_char}limit pcc:ulimit
-bind pub n|- ${pcc_char}ulimit pcc:ulimit
-bind pub n|- ${pcc_char}unlimit pcc:ulimit
-bind pub n|- ${pcc_char}lock pcc:lock
-bind pub n|- ${pcc_char}unlock pcc:unlock
+bind pub o|o ${pcc_char}t pcc:topic
+bind pub o|o ${pcc_char}topic pcc:topic
+bind pub n|n ${pcc_char}m pcc:mode
+bind pub n|n ${pcc_char}mode pcc:mode
+bind pub m|m ${pcc_char}s pcc:shutup
+bind pub m|m ${pcc_char}silence pcc:shutup
+bind pub m|m ${pcc_char}shutup pcc:shutup
+bind pub m|m ${pcc_char}l pcc:ulimit
+bind pub m|m ${pcc_char}limit pcc:ulimit
+bind pub m|m ${pcc_char}ulimit pcc:ulimit
+bind pub m|m ${pcc_char}unlimit pcc:ulimit
+bind pub n|n ${pcc_char}lock pcc:lock
+bind pub n|n ${pcc_char}unlock pcc:unlock
 
 bind pub n|- ${pcc_char}au pcc:adduser
 bind pub n|- ${pcc_char}+user pcc:adduser
@@ -55,7 +55,7 @@ bind pub n|- ${pcc_char}save pcc:save
 bind pub n|- ${pcc_char}backup pcc:backup
 bind pub n|- ${pcc_char}die pcc:die
 
-bind pub n|- ${pcc_char}jump pcc:jump
+bind pub n|n ${pcc_char}jump pcc:jump
 
 proc pcc:adduser {nick host hand chan text} {
 	if {![pcc:ok_usr $nick $chan 0]} { return 0 }

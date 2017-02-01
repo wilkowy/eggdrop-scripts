@@ -1,5 +1,5 @@
 # Auto Limit Updater (based on Psotnic limiter)
-# by wilk wilkowy // 2016..2016-11-28
+# by wilk wilkowy // 2016..2017-01-29
 
 # Todo: move vars to .chanset
 # Todo: add dcc cmds w/o enforcing
@@ -10,7 +10,7 @@ set alimit_delay_up 120
 # Limit update latency in seconds - gone user (0 - instant).
 set alimit_delay_down 30
 
-# Limit update latency in seconds - server mode change (netsplit) (0 - instant).
+# Limit update latency in seconds - server mode change (netsplit, got op) (0 - instant).
 set alimit_delay_server 5
 
 # Limit update latency in seconds - owner mode change (0 - instant).
@@ -40,6 +40,7 @@ bind sign - * alimit:quit
 bind kick - * alimit:kick
 bind mode - *+l* alimit:mode
 bind mode - *-l* alimit:mode
+bind mode - *+o* alimit:mode
 bind dcc n|n autolimit alimit:dccupdate
 
 proc alimit:dccupdate {hand idx text} {
@@ -83,28 +84,32 @@ proc alimit:kick {nick uhost hand chan whom why} {
 	return
 }
 
-proc alimit:mode {nick uhost hand chan mode data} {
+proc alimit:mode {nick uhost hand chan mode whom} {
 	global alimit_delay_server alimit_delay_owner alimit_delay_bot alimit_delay_op
-	if {[isbotnick $nick] || ($mode ne "-l" && $mode ne "+l")} { return }
-	set enforce 0
-	if {$nick eq "" && $hand eq "*"} {
-		set delay $alimit_delay_server
-		if {$mode eq "-l"} { set enforce 1 }
-	} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand n|n $chan]} {
-		set delay $alimit_delay_owner
-	} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand b|- $chan]} {
-		set delay $alimit_delay_bot
-	} else {
-		set delay $alimit_delay_op
-		if {$mode eq "-l"} { set enforce 1 }
+	if {[isbotnick $nick] || ![botisop $chan]} { return }
+	if {$mode eq "+o" && [isbotnick $whom]} {
+		alimit:change $chan $alimit_delay_server 1 1
+	} elseif {($mode eq "-l" || $mode eq "+l")} {
+		set enforce 0
+		if {$nick eq "" && $hand eq "*"} {
+			set delay $alimit_delay_server
+			if {$mode eq "-l"} { set enforce 1 }
+		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand n|n $chan]} {
+			set delay $alimit_delay_owner
+		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand b|- $chan]} {
+			set delay $alimit_delay_bot
+		} else {
+			set delay $alimit_delay_op
+			if {$mode eq "-l"} { set enforce 1 }
+		}
+		alimit:change $chan $delay 1 $enforce
 	}
-	alimit:change $chan $delay 1 $enforce
 	return
 }
 
-proc alimit:change {chan delay {skip 0} {enforce 0}} {
+proc alimit:change {chan delay {nocheck 0} {enforce 0}} {
 	global alimit_timer alimit_flood alimit_protect
-	if {!$skip && $alimit_protect > 0} {
+	if {!$nocheck && $alimit_protect > 0} {
 		if {[info exists alimit_flood($chan)] && $alimit_flood($chan)} { return }
 		set alimit_flood($chan) 1
 		utimer $alimit_protect [list alimit:protect $chan]
@@ -188,4 +193,4 @@ proc alimit:info {idx} {
 	}
 }
 
-putlog "Auto Limit v1.5 by wilk"
+putlog "Auto Limit v1.6 by wilk"
