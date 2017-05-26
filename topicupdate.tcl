@@ -1,5 +1,7 @@
-# Topic Update: data->jutro->dzis
-# by wilk wilkowy // 2015..2017-01-27
+# Name		Topic Update: data->jutro->dzis
+# Author	wilk wilkowy
+# Version	1.13 (2015..2017-01-27)
+# License	GNU GPL v2 or any later version
 
 # On/off .chanset flag.
 setudef flag topicupdate

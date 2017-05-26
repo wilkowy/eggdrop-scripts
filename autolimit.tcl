@@ -1,5 +1,7 @@
-# Auto Limit Updater (based on Psotnic limiter)
-# by wilk wilkowy // 2016..2017-01-29
+# Name		Auto Limit Updater (based on Psotnic limiter)
+# Author	wilk wilkowy
+# Version	1.7 (2016..2017-05-24)
+# License	GNU GPL v2 or any later version
 
 # Todo: move vars to .chanset
 # Todo: add dcc cmds w/o enforcing
@@ -10,17 +12,23 @@ set alimit_delay_up 120
 # Limit update latency in seconds - gone user (0 - instant).
 set alimit_delay_down 30
 
-# Limit update latency in seconds - server mode change (netsplit, got op) (0 - instant).
+# Limit update latency in seconds - bot got opped (0 - instant, -1 - ignore).
+set alimit_delay_gotop 5
+
+# Limit update latency in seconds - server mode change (netsplit) (0 - instant, -1 - ignore).
 set alimit_delay_server 5
 
-# Limit update latency in seconds - owner mode change (0 - instant).
-set alimit_delay_owner 15
+# Limit update latency in seconds - owner mode change (0 - instant, -1 - ignore).
+set alimit_delay_owner -1
 
-# Limit update latency in seconds - bot mode change (0 - instant).
+# Limit update latency in seconds - bot mode change (0 - instant, -1 - ignore).
 set alimit_delay_bot $alimit_delay_up
 
-# Limit update latency in seconds - @ mode change (0 - instant).
+# Limit update latency in seconds - @ mode change (0 - instant, -1 - ignore).
 set alimit_delay_op 0
+
+# Limit update latency in seconds - someone else mode change (0 - instant, -1 - ignore).
+set alimit_delay_unknown 0
 
 # Keep this amount of free limit space for users.
 set alimit_offset 5
@@ -35,6 +43,7 @@ set alimit_protect 15
 setudef flag autolimit
 
 bind join - * alimit:join
+#bind rejn - * alimit:netjoin
 bind part - * alimit:part
 bind sign - * alimit:quit
 bind kick - * alimit:kick
@@ -85,21 +94,30 @@ proc alimit:kick {nick uhost hand chan whom why} {
 }
 
 proc alimit:mode {nick uhost hand chan mode whom} {
-	global alimit_delay_server alimit_delay_owner alimit_delay_bot alimit_delay_op
+	global alimit_delay_server alimit_delay_gotop alimit_delay_owner alimit_delay_bot alimit_delay_op alimit_delay_unknown
 	if {[isbotnick $nick] || ![botisop $chan]} { return }
 	if {$mode eq "+o" && [isbotnick $whom]} {
-		alimit:change $chan $alimit_delay_server 1 1
+		if {$alimit_delay_gotop < 0} { return }
+		alimit:change $chan $alimit_delay_gotop 1
 	} elseif {($mode eq "-l" || $mode eq "+l")} {
 		set enforce 0
 		if {$nick eq "" && $hand eq "*"} {
+			if {$alimit_delay_server < 0} { return }
 			set delay $alimit_delay_server
 			if {$mode eq "-l"} { set enforce 1 }
-		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand n|n $chan]} {
-			set delay $alimit_delay_owner
 		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand b|- $chan]} {
+			if {$alimit_delay_bot < 0} { return }
 			set delay $alimit_delay_bot
-		} else {
+		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand n|n $chan]} {
+			if {$alimit_delay_owner < 0} { return }
+			set delay $alimit_delay_owner
+		} elseif {$hand ne "" && $hand ne "*" && [matchattr $hand o|o $chan]} {
+			if {$alimit_delay_op < 0} { return }
 			set delay $alimit_delay_op
+			if {$mode eq "-l"} { set enforce 1 }
+		} else {
+			if {$alimit_delay_unknown < 0} { return }
+			set delay $alimit_delay_unknown
 			if {$mode eq "-l"} { set enforce 1 }
 		}
 		alimit:change $chan $delay 1 $enforce
@@ -129,15 +147,20 @@ proc alimit:protect {chan} {
 	set alimit_flood($chan) 0
 }
 
-proc alimit:update {chan {enforce 0}} {
-	global alimit_offset alimit_tolerance
-	if {![channel get $chan autolimit] || ![botonchan $chan] || ![botisop $chan]} { return }
-	set users [llength [chanlist $chan]]
+proc alimit:getlimit {chan} {
 	set modes [split [getchanmode $chan]]
 	set limit 0
 	if {[string match *l* [lindex $modes 0]]} {
 		set limit [lindex $modes end]
 	}
+	return $limit
+}
+
+proc alimit:update {chan {enforce 0}} {
+	global alimit_offset alimit_tolerance alimit_limit
+	if {![channel get $chan autolimit] || ![botonchan $chan] || ![botisop $chan]} { return }
+	set users [llength [chanlist $chan]]
+	set limit [alimit:getlimit $chan]
 	set new_limit [expr {$users + $alimit_offset}]
 	if {$new_limit == $limit && !$enforce} { return }
 	if {$alimit_tolerance >= 0} {
@@ -148,6 +171,7 @@ proc alimit:update {chan {enforce 0}} {
 	if {$enforce || $limit < [expr {$users + $alimit_offset - $tolerance}] || $limit > [expr {$users + $alimit_offset + $tolerance}]} {
 		putlog "Limit change ($chan/$users): $limit -> $new_limit"
 		pushmode $chan +l $new_limit
+		set alimit_limit($chan) $new_limit
 		#flushmode $chan
 	}
 }
@@ -162,11 +186,7 @@ proc alimit:info {idx} {
 		} else {
 			set tolerance [expr {int($alimit_offset * $alimit_tolerance / -100.0)}]
 		}
-		set modes [split [getchanmode $chan]]
-		set limit 0
-		if {[string match *l* [lindex $modes 0]]} {
-			set limit [lindex $modes end]
-		}
+		set limit [alimit:getlimit $chan]
 		set users [llength [chanlist $chan]]
 		set range "ANYONE"
 		if {$limit} {
@@ -193,4 +213,4 @@ proc alimit:info {idx} {
 	}
 }
 
-putlog "Auto Limit v1.6 by wilk"
+putlog "Auto Limit v1.7 by wilk"

@@ -1,5 +1,7 @@
-# Public Channel Commands
-# by wilk wilkowy // 2007..2017-01-09
+# Name		Public Channel Commands
+# Author	wilk wilkowy
+# Version	1.8 (2007..2017-01-09)
+# License	GNU GPL v2 or any later version
 
 set pcc_char "!"
 

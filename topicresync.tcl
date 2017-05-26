@@ -1,5 +1,7 @@
-# Topic Resync & Recovery after a netsplit
-# by wilk wilkowy // 2015..2016-11-28
+# Name		Topic Resync & Recovery after a netsplit
+# Author	wilk wilkowy
+# Version	1.8 (2015..2016-11-28)
+# License	GNU GPL v2 or any later version
 
 # Todo: move vars to .chanset
 
