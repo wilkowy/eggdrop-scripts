@@ -1,7 +1,7 @@
 # eggdrop-scripts
 My Eggdrop scripts.
 
-- Auto Limit v1.7
-- Topic Resync v1.8
-- Topic Update v1.13
+- Auto Limit v1.10
+- Topic Resync v1.13
+- Topic Update v1.14
 - Public Channel Commands v1.8
