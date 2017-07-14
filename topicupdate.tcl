@@ -1,15 +1,15 @@
 # Name		Topic Update: data->jutro->dzis
 # Author	wilk wilkowy
-# Version	1.13 (2015..2017-01-27)
+# Version	1.14 (2015..2017-07-07)
 # License	GNU GPL v2 or any later version
 
 # On/off .chanset flag.
 setudef flag topicupdate
 
-bind evnt - logfile topupd:update
-bind dcc n|n topicupdate topupd:dccupdate
+bind time - "00 00 *" topupd:update
+bind dcc n|n topicupdate topupd:dcc
 
-proc topupd:dccupdate {hand idx text} {
+proc topupd:dcc {hand idx text} {
 	if {$text eq "now"} {
 		topupd:update logfile
 		return 1
@@ -19,7 +19,7 @@ proc topupd:dccupdate {hand idx text} {
 	return
 }
 
-proc topupd:update {type} {
+proc topupd:update {minute hour day month year} {
 	set now_day [strftime %-d]
 	set now_month [strftime %-m]
 	foreach chan [channels] {
@@ -78,4 +78,4 @@ proc topupd:update {type} {
 	return
 }
 
-putlog "Topic Update v1.13 by wilk"
+putlog "Topic Update v1.14 by wilk"
