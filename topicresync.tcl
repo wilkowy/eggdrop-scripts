@@ -1,17 +1,17 @@
 # Name		Topic Resync & Recovery after a netsplit
 # Author	wilk wilkowy
-# Version	1.13 (2015..2017-07-14)
+# Version	1.14 (2015..2018-01-29)
 # License	GNU GPL v2 or any later version
 
-# Todo: move vars to .chanset
-
-# Resync delay in minutes (0 - instant).
+# Resync delay, in minutes (0 - instant).
 set topres_delay 15
 
-# Protect against floods (inertia), in seconds (0 - off).
-set topres_protect 30
+# Protect against floods, in seconds (0 - off).
+set topres_antiflood 15
 
-# Resync topic everywhere (unless set by @ before timer runs out) [1] or only on channels where someone netsplitted [0].
+# Resync topic everywhere?
+# 1: unless set by @ before timer runs out
+# 0: only on channels where someone netsplitted
 set topres_everywhere 1
 
 # Default channel topics.
@@ -23,8 +23,6 @@ setudef flag topicresync
 bind rejn - * topres:check
 bind topc o|o * topres:change
 bind dcc n|n topicresync topres:dcc
-
-if {![info exists topres_flood]} { set topres_flood 0 }
 
 proc topres:dcc {hand idx text} {
 	if {$text eq "now"} {
@@ -43,13 +41,11 @@ proc topres:cleantxt {text} {
 }
 
 proc topres:check {nick uhost hand chan} {
-	global topres_timer topres_delay topres_flood topres_protect topres_resync
+	global topres_timer topres_delay topres_flood topres_antiflood topres_resync
 	set topres_resync($chan) 1
-	if {$topres_protect > 0} {
-		if {$topres_flood} { return }
-		set topres_flood 1
-		utimer $topres_protect [list set topres_flood 0]
-	}
+	set now [unixtime]
+	if {[info exists topres_flood] && ($now - $topres_flood) < $topres_antiflood} { return }
+	set topres_flood $now
 	if {[info exists topres_timer] && [lsearch -glob [timers] "*$topres_timer"] != -1} {
 		killtimer $topres_timer
 	}
@@ -82,22 +78,22 @@ proc topres:resync {} {
 		}
 		set topres_resync($chan) $topres_everywhere
 		if {!$resync} { continue }
-		set chtopic [topic $chan]
-		if {$chtopic ne ""} {
-			set topic [topres:cleantxt $chtopic]
-			set length [format "%03d" [string length $topic]]
-			putlog "Topic resync ($chan) \[$length]: $topic"
-			putserv "TOPIC $chan :$chtopic"
-			set topres_topic($chan) $chtopic
+		set topic [topic $chan]
+		if {$topic ne ""} {
+			set ctopic [topres:cleantxt $topic]
+			set length [format "%03d" [string length $ctopic]]
+			putlog "Topic resync ($chan) \[$length]: $ctopic"
+			putserv "TOPIC $chan :$topic"
+			set topres_topic($chan) $topic
 		} elseif {[info exists topres_topic($chan)] && $topres_topic($chan) ne ""} {
-			set topic [topres:cleantxt $topres_topic($chan)]
-			set length [format "%03d" [string length $topic]]
-			putlog "Topic recovery ($chan) \[$length]: $topic"
+			set ctopic [topres:cleantxt $topres_topic($chan)]
+			set length [format "%03d" [string length $ctopic]]
+			putlog "Topic recovery ($chan) \[$length]: $ctopic"
 			putserv "TOPIC $chan :$topres_topic($chan)"
 		} elseif {[info exists topres_default($chan)] && $topres_default($chan) ne ""} {
-			set topic [topres:cleantxt $topres_default($chan)]
-			set length [format "%03d" [string length $topic]]
-			putlog "Topic default ($chan) \[$length]: $topic"
+			set ctopic [topres:cleantxt $topres_default($chan)]
+			set length [format "%03d" [string length $ctopic]]
+			putlog "Topic default ($chan) \[$length]: $ctopic"
 			putserv "TOPIC $chan :$topres_default($chan)"
 			set topres_topic($chan) $topres_default($chan)
 		}
@@ -114,11 +110,11 @@ proc topres:info {idx} {
 		} elseif {![botonchan $chan]} {
 			putdcc $idx "* Channel $chan: (not on channel)"
 		} else {
-			set status ""
+			set info "* Channel $chan:"
 			if {![botisop $chan]} {
-				set status " (need ops)"
+				append info " (need ops)"
 			}
-			putdcc $idx "* Channel $chan:$status"
+			putdcc $idx $info
 			set topic [topres:cleantxt [topic $chan]]
 			set length [format "%03d" [string length $topic]]
 			putdcc $idx "| Topic (current) \[$length] : $topic"
@@ -136,4 +132,4 @@ proc topres:info {idx} {
 	}
 }
 
-putlog "Topic Resync v1.13 by wilk"
+putlog "Topic Resync v1.14 by wilk"

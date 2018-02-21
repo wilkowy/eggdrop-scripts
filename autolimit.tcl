@@ -1,10 +1,7 @@
-# Name		Auto Limit Updater (based on Psotnic limiter)
+# Name		Auto-Limit (based on Psotnic limiter)
 # Author	wilk wilkowy
-# Version	1.10 (2016..2017-07-14)
+# Version	1.12 (2016..2018-01-29)
 # License	GNU GPL v2 or any later version
-
-# Todo: move vars to .chanset
-# Todo: add dcc cmds w/o enforcing
 
 # Limit update latency in seconds - new user (0 - instant, min:max notation allowed).
 set alimit_delay_up 120
@@ -36,11 +33,11 @@ set alimit_offset 5
 # Limit tolerance to reduce amount of unnecessary updates (<0 - percent of offset, >0 - static, 0 - off).
 set alimit_tolerance -50
 
-# Protect against floods (inertia), in seconds (0 - off).
-set alimit_protect 15
+# Protect against event floods, in seconds (0 - off).
+set alimit_antiflood 15
 
-# Lockdown duration in seconds (0 - off). Lockdown closes the channel (+i) to prevent join/part floods with clones
-set alimit_lockdown_time 30
+# Lockdown duration in seconds (0 - off). Lockdown closes the channel (+i) to prevent join/part floods with clones.
+set alimit_lockdown_time 15
 
 # On/off .chanset flags.
 setudef flag autolimit
@@ -59,7 +56,12 @@ bind dcc n|n autolimit alimit:dcc
 proc alimit:dcc {hand idx text} {
 	if {$text eq "info"} {
 		alimit:info $idx
-	} elseif {$text eq "all"} {
+	} elseif {$text eq "now"} {
+		foreach chan [channels] {
+			alimit:update $chan
+		}
+		return 1
+	} elseif {$text eq "now!"} {
 		foreach chan [channels] {
 			alimit:update $chan 1
 		}
@@ -68,7 +70,7 @@ proc alimit:dcc {hand idx text} {
 		alimit:update $text 1
 		return 1
 	} else {
-		putdcc $idx "Usage: .autolimit <info/all/#>"
+		putdcc $idx "Usage: .autolimit <info/now/now!/#>"
 	}
 	return
 }
@@ -78,10 +80,10 @@ proc alimit:getdelay {value} {
 	if {[llength $time] > 1} {
 		set min [lindex $time 0]
 		set max [lindex $time 1]
-		if {$_min > $_max} {
-			foreach {_min _max} [list $_max $_min] {break}
+		if {$min > $max} {
+			foreach {min max} [list $max $min] {break}
 		}
-		return [expr {[rand [expr {$_max + 1 - $_min}]] + $_min}]
+		return [expr {[rand [expr {$max + 1 - $min}]] + $min}]
 	} else {
 		return $value
 	}
@@ -102,15 +104,17 @@ proc alimit:islocked {chan} {
 
 proc alimit:join {nick uhost hand chan} {
 	global alimit_delay_up alimit_lockdown_time alimit_lockdown
-	if {$alimit_lockdown_time > 0 && [channel get $chan lockdown] && [botisop $chan]} {
-		set limit [alimit:getlimit $chan]
-		if {$limit ne "" && [llength [chanlist $chan]] == $limit && ![alimit:islocked $chan]} {
-			if {![info exists alimit_lockdown($chan)] || $alimit_lockdown($chan) == 0} {
-				set alimit_lockdown($chan) 1
-				pushmode $chan +i
-				putlog "Channel full ($chan) - lockdown!"
-				utimer $alimit_lockdown_time [list alimit:unlock $chan]
-			}
+	set users [llength [chanlist $chan]]
+	set limit [alimit:getlimit $chan]
+	if {$limit ne "" && $users >= $limit} {
+		if {$alimit_lockdown_time > 0 && [channel get $chan lockdown] && [botisop $chan] && ![alimit:islocked $chan] && (![info exists alimit_lockdown($chan)] || $alimit_lockdown($chan) == 0)} {
+			set alimit_lockdown($chan) 1
+			pushmode $chan +i
+			flushmode $chan
+			putlog "Channel is full ($chan/$users:$limit) - lockdown!"
+			utimer $alimit_lockdown_time [list alimit:unlock $chan]
+		} else {
+			putlog "Channel is full ($chan/$users:$limit)!"
 		}
 	}
 	alimit:change $chan $alimit_delay_up
@@ -121,7 +125,9 @@ proc alimit:unlock {chan} {
 	global alimit_lockdown
 	set alimit_lockdown($chan) 0
 	pushmode $chan -i
-	putlog "Lockdown lifted ($chan)"
+	set users [llength [chanlist $chan]]
+	set limit [alimit:getlimit $chan]
+	putlog "Lockdown lifted ($chan/$users:$limit)"
 }
 
 proc alimit:part {nick uhost hand chan {msg ""}} {
@@ -175,18 +181,16 @@ proc alimit:mode {nick uhost hand chan mode whom} {
 }
 
 proc alimit:change {chan delay {nocheck 0} {enforce 0}} {
-	global alimit_timer alimit_flood alimit_protect
-	if {!$nocheck && $alimit_protect > 0} {
-		if {[info exists alimit_flood($chan)] && $alimit_flood($chan)} { return }
-		set alimit_flood($chan) 1
-		utimer $alimit_protect [list set alimit_flood($chan) 0]
-	}
+	global alimit_timer alimit_flood alimit_antiflood
+	set now [unixtime]
+	if {!$nocheck && [info exists alimit_flood($chan)] && ($now - $alimit_flood($chan)) < $alimit_antiflood} { return }
+	set alimit_flood($chan) $now
 	if {[info exists alimit_timer($chan)] && [lsearch -glob [utimers] "*$alimit_timer($chan)"] != -1} {
 		killutimer $alimit_timer($chan)
 	}
-	set _delay [alimit:getdelay $delay]
-	if {$_delay > 0} {
-		set alimit_timer($chan) [utimer $_delay [list alimit:update $chan $enforce]]
+	set delay [alimit:getdelay $delay]
+	if {$delay > 0} {
+		set alimit_timer($chan) [utimer $delay [list alimit:update $chan $enforce]]
 	} else {
 		alimit:update $chan $enforce
 	}
@@ -207,7 +211,7 @@ proc alimit:update {chan {enforce 0}} {
 	} else {
 		set tolerance [expr {int($alimit_offset * $alimit_tolerance / -100.0)}]
 	}
-	if {$enforce || $limit eq "" || $limit < [expr {$users + $alimit_offset - $tolerance}] || $limit > [expr {$users + $alimit_offset + $tolerance}]} {
+	if {$enforce || $limit eq "" || $limit < $users + $alimit_offset - $tolerance || $limit > $users + $alimit_offset + $tolerance} {
 		if {$limit eq ""} {
 			set limit "none"
 		}
@@ -228,11 +232,11 @@ proc alimit:info {idx} {
 		} elseif {![botonchan $chan]} {
 			putdcc $idx "* Channel $chan: (not on channel)"
 		} else {
-			set status ""
+			set info "* Channel $chan:"
 			if {![botisop $chan]} {
-				set status " (need ops)"
+				append info " (need ops)"
 			}
-			putdcc $idx "* Channel $chan:$status"
+			putdcc $idx $info
 			if {$alimit_tolerance >= 0} {
 				set tolerance $alimit_tolerance
 			} else {
@@ -265,9 +269,9 @@ proc alimit:info {idx} {
 			if {$limit eq ""} {
 				set limit "none"
 			}
-			putdcc $idx "| Limit : $limit \[expected: $exp, allowed: $min..$max] ($status)"
+			putdcc $idx "| Limit : $limit \[expected: $exp, tolerance: $min..$max] ($status)"
 		}
 	}
 }
 
-putlog "Auto Limit v1.10 by wilk"
+putlog "Auto Limit v1.12 by wilk"
