@@ -1,6 +1,8 @@
 # Eggdrop scripts
 My Eggdrop scripts. Check [Wiki](https://github.com/wilkowy/eggdrop-scripts/wiki) for more informations and examples.
 
+**UPLOADING IN PROGRESS**
+
 - **allbans.tcl** - enhanced .bans command
 - **chanpeak.tcl** - track channel peak
 - **findclones.tcl** - detect clones
