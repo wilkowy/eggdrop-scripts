@@ -71,10 +71,10 @@ variable cmd_name_vsearch "memo??"
 variable antiflood_delay 2
 
 # File that stores all memos.
-variable memo_file "scripts/wilk/memo.db"
+variable memo_file "scripts/memo.db"
 
 # File that stores dump of database when using .memo list ("" - no dump).
-variable memo_dump "scripts/wilk/memo.txt"
+variable memo_dump "scripts/memo.txt"
 
 # Maximum number of redirections for aliases and maximum number of substitution rounds for in-place tokens.
 variable max_redirections 10
