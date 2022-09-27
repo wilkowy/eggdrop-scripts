@@ -61,7 +61,7 @@ set announcement(*) "\037Nowy rekord odwiedzin kanału #CHAN# został właśnie 
 variable announcement_delay 5
 
 # File that stores all chanpeaks.
-variable chanpeak_file "scripts/wilk/chanpeak.db"
+variable chanpeak_file "scripts/chanpeak.db"
 
 }
 
