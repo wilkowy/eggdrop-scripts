@@ -621,8 +621,8 @@ namespace eval rssalert {
 	}
 
 	proc load_database {} {
-		if {$v::cache_file eq "" || ![file exists $v::cache_file] || [file size $v::cache_file] <= 0} { return }
-		set file [open $v::cache_file r]
+		if {$c::cache_file eq "" || ![file exists $c::cache_file] || [file size $c::cache_file] <= 0} { return }
+		set file [open $c::cache_file r]
 		unset -nocomplain v::cache
 		array set v::cache [gets $file]
 		set v::queue [gets $file]
@@ -630,8 +630,8 @@ namespace eval rssalert {
 	}
 
 	proc save_database {} {
-		if {$v::cache_file eq ""} { return }
-		set file [open $v::cache_file w 0600]
+		if {$c::cache_file eq ""} { return }
+		set file [open $c::cache_file w 0600]
 		puts $file [array get v::cache]
 		puts $file $v::queue
 		close $file
